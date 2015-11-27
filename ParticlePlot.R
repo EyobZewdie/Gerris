@@ -1,38 +1,39 @@
+#Load Packages
 library(dplyr)
-pData <- read.delim("cloud1.dat", header = FALSE, sep = " ");
-pData <- pData[,!is.na(pData[1,])]
-pData <- tbl_df(pData)
-pData <- rename(pData, Pnumber=V6, long=V7, lat=V8, depth=V9)
-by_Pnumber <- group_by(pData, Pnumber)
-summary <- summarize(by_Pnumber, count = n())
-p0Data = filter(pData, Pnumber == 0)
-
-for (i in 1:nrow(p0Data)){
-  plotName= paste("plot", toString(i))
-  jpeg(plotName)
-  with(p0Data[i,], plot (long, lat, xlim = c(min(pData$long, na.rm = T), max(pData$long, na.rm = T)), ylim = c(min(pData$lat, na.rm = T), max(pData$lat, na.rm = T)), xlab ='long', ylab = 'lat'))
-  for (j in 1:nrow(na.omit(summary))){
-    requiredData = filter(pData, Pnumber == j - 1)
-    par(new = T)
-    with(requiredData[i,], plot (long, lat, xlim = c(min(pData$long, na.rm = T), max(pData$long, na.rm = T)), ylim = c(min(pData$lat, na.rm = T), max(pData$lat, na.rm = T)), xlab ='long', ylab = 'lat'))
-  }
-  dev.off()
-}
-
 library(ggplot2)
 library(rgdal)
 
+#Data Manipulation
+pData <- read.delim("T172800.dat", header = FALSE, sep = " ");
+pData <- pData[,!is.na(pData[1,])]
+pData <- tbl_df(pData)
+pData <- rename(pData, Pnumber=V6, long=V7, lat= V8, depth=V9)
+pData$lat = -pData$lat
+p0Data = filter(pData, Pnumber == 0)
+
+by_Pnumber <- group_by(pData, Pnumber)
+summary <- summarize(by_Pnumber, count = n())
+number = nrow(na.omit(summary)) #number of particles
+                     
+#plotting
 nz <- fortify(readOGR('/dragonfly/gis/shapes/custom/bigislands.shp', 'bigislands'))
 nz$lat <- -nz$lat
 
-
-g <- ggplot(nz, aes(x=long,y=lat, group=group)) + 
-  geom_polygon(fill='grey') + 
-  coord_fixed(ratio=1/cos(40/(180)*pi)) + 
-  theme_bw() + 
-  theme(panel.grid.major = element_blank()) +
-  scale_y_reverse() +
+#for (i in 1:nrow(p0Data)){ #nrow(p0Data) is the number of time steps
+  i = 350
+  plotName = paste("plot", toString(i), ".jpg", sep="")
+  timeStep <- slice(pData, ((i - 1)*number):(number*i - 1))
+  g <- ggplot(data = timeStep, aes(x=long, y=lat)) + 
+  geom_point(alpha = 0.5) +
+  geom_polygon(data=nz, fill='grey', aes(group=group)) +
   xlab('Longitude (\u00B0E)') +
-  ylab('Latitude (\u00B0S)')
-ggsave('nz.pdf', width=5, height=7)
-ggplot(data=groupedPD, aes(x=long, y=lat, group=0) + geom_line()
+  ylab('Latitude (\u00B0S)') + 
+  xlim( min(na.omit(pData$long)), max(na.omit(pData$long))) +
+  scale_y_reverse(lim=c(max(na.omit(pData$lat)),min(na.omit(pData$lat)))) +
+  coord_fixed(ratio=1/cos(40/(180)*pi)) +
+  #geom_bin2d(binwidth = c(0.075,0.05)) +
+  theme_bw() +
+  theme(panel.border = element_blank(), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))+
+  #scale_fill_gradient2(low="white", high="blue") 
+  ggsave(filename = plotName, plot = g) 
+  #}
