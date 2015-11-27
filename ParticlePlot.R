@@ -19,8 +19,7 @@ number = nrow(na.omit(summary)) #number of particles
 nz <- fortify(readOGR('/dragonfly/gis/shapes/custom/bigislands.shp', 'bigislands'))
 nz$lat <- -nz$lat
 
-#for (i in 1:nrow(p0Data)){ #nrow(p0Data) is the number of time steps
-  i = 350
+for (i in 1:nrow(p0Data)){ #nrow(p0Data) is the number of time steps
   plotName = paste("plot", toString(i), ".jpg", sep="")
   timeStep <- slice(pData, ((i - 1)*number):(number*i - 1))
   g <- ggplot(data = timeStep, aes(x=long, y=lat)) + 
@@ -31,9 +30,7 @@ nz$lat <- -nz$lat
   xlim( min(na.omit(pData$long)), max(na.omit(pData$long))) +
   scale_y_reverse(lim=c(max(na.omit(pData$lat)),min(na.omit(pData$lat)))) +
   coord_fixed(ratio=1/cos(40/(180)*pi)) +
-  #geom_bin2d(binwidth = c(0.075,0.05)) +
   theme_bw() +
   theme(panel.border = element_blank(), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))+
-  #scale_fill_gradient2(low="white", high="blue") 
   ggsave(filename = plotName, plot = g) 
-  #}
+}
